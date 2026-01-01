@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Life Dashboard 2025</title>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <style>
+        :root {
+            --bg-color: #f3f4f6;
+            --card-bg: #ffffff;
+            --text-main: #1f2937;
+            --text-muted: #6b7280;
+            --primary: #6366f1;
+            --primary-hover: #4f46e5;
+            --danger: #ef4444;
+            --border: #e5e7eb;
+            --radius: 12px;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .app-container {
+            max-width: 1000px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+
+        @media (min-width: 768px) {
+            .app-container { grid-template-columns: repeat(2, 1fr); }
+            .full-width { grid-column: span 2; }
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            padding: 24px;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+        }
+
+        h2 { margin-top: 0; font-size: 1.25rem; display: flex; align-items: center; gap: 8px; color: var(--text-main); }
+        h2 i { color: var(--primary); }
+        label { display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 4px; font-weight: 500;}
+
+        input, select, textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            margin-bottom: 10px;
+            font-size: 0.95rem;
+            box-sizing: border-box;
+            background: #f9fafb;
+        }
+        input:focus { outline: 2px solid var(--primary); border-color: transparent; }
+
+        button {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background 0.2s;
+        }
+        button:hover { background: var(--primary-hover); }
+        button.secondary { background: #e5e7eb; color: var(--text-main); }
+        button.danger { background: var(--danger); }
+        button.icon-btn { padding: 6px; font-size: 1.1rem; background: transparent; color: var(--text-muted); }
+        button.icon-btn:hover { background: #f3f4f6; color: var(--text-main); }
+
+        .clock-container { text-align: center; }
+        .time-display { font-size: 3rem; font-weight: 800; letter-spacing: -1px; color: var(--primary); }
+        .date-display { font-size: 1.1rem; color: var(--text-muted); }
+
+        .freq-selector { display: flex; gap: 5px; margin-bottom: 10px; flex-wrap: wrap; }
+        .day-check {
+            cursor: pointer; user-select: none;
+            width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;
+            border-radius: 50%; border: 1px solid var(--border); font-size: 0.75rem; color: var(--text-muted);
+        }
+        .day-check.selected { background: var(--primary); color: white; border-color: var(--primary); }
+        
+        .habit-list { list-style: none; padding: 0; }
+        .habit-item { background: #f9fafb; border: 1px solid var(--border); padding: 12px; border-radius: 8px; margin-bottom: 8px; }
+        .habit-header { display: flex; justify-content: space-between; align-items: center; font-weight: 600; }
+        .habit-details { font-size: 0.85rem; color: var(--text-muted); margin-top: 4px; }
+
+        .res-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; margin-top: 15px; }
+        .res-card { background: #fff; border: 1px solid var(--border); border-left: 4px solid var(--primary); padding: 12px; border-radius: 8px; }
+
+        .list-group { margin-top: 15px; }
+        .list-row { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid var(--border); }
+        .time-badge { background: #e0e7ff; color: var(--primary); padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; }
+        
+        .streak-count { font-size: 0.85rem; font-weight: bold; color: var(--primary); }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    
+    <div class="card full-width">
+        <div class="clock-container">
+            <div class="time-display" id="clock-time">00:00:00</div>
+            <div class="date-display" id="clock-date">Loading...</div>
+            <div class="clock-controls" style="margin-top:15px; display:flex; justify-content:center; gap:10px;">
+                <select id="timezone-select" style="width: auto; margin:0;"></select>
+                <button class="secondary" id="fmt-toggle" style="margin:0;">24H</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2><i class="ph ph-fire"></i> Streak Breakers</h2>
+        <label>Track days clean from a bad habit</label>
+        <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+            <input type="text" id="bad-habit-input" placeholder="e.g. Smoking, Procrastinating" style="margin:0;">
+            <button onclick="addBadHabit()">Start</button>
+        </div>
+        <div id="bad-habit-list" class="list-group"></div>
+    </div>
+
+    <div class="card">
+        <h2><i class="ph ph-check-circle"></i> Habit Builder</h2>
+        <div style="background: #f9fafb; padding: 15px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 15px;">
+            <input type="text" id="habit-name" placeholder="Positive habit name...">
+            <div class="freq-selector" id="day-selector">
+                <div class="day-check" data-day="Sun">S</div>
+                <div class="day-check" data-day="Mon">M</div>
+                <div class="day-check" data-day="Tue">T</div>
+                <div class="day-check" data-day="Wed">W</div>
+                <div class="day-check" data-day="Thu">T</div>
+                <div class="day-check" data-day="Fri">F</div>
+                <div class="day-check" data-day="Sat">S</div>
+            </div>
+            <button onclick="addHabit()" style="width:100%">Add Habit</button>
+        </div>
+        <ul id="habit-list" class="habit-list"></ul>
+    </div>
+
+    <div class="card full-width">
+        <h2><i class="ph ph-target"></i> 2025 Resolutions</h2>
+        <div style="display: flex; gap: 10px;">
+            <input type="text" id="res-input" placeholder="My resolution is..." style="margin:0;">
+            <button onclick="addResolution()">Save</button>
+        </div>
+        <div id="resolutions-container" class="res-grid"></div>
+    </div>
+
+    <div class="card">
+        <h2><i class="ph ph-calendar"></i> Weekly Planner</h2>
+        <div style="display: flex; gap: 5px; margin-bottom: 5px;">
+            <select id="planner-day"><option>Monday</option><option>Tuesday</option><option>Wednesday</option><option>Thursday</option><option>Friday</option><option>Saturday</option><option>Sunday</option></select>
+            <input type="time" id="planner-time">
+        </div>
+        <div style="display: flex; gap: 10px;">
+            <input type="text" id="planner-task" placeholder="Task..." style="margin:0;">
+            <button onclick="addPlan()">Add</button>
+        </div>
+        <div id="planner-list" class="list-group"></div>
+    </div>
+
+    <div class="card">
+        <h2><i class="ph ph-device-mobile"></i> Screen Time Log</h2>
+        <div style="display: flex; gap: 10px;">
+            <input type="text" id="st-app" placeholder="App..." style="margin:0;">
+            <input type="number" id="st-hours" placeholder="Hrs" style="margin:0; width: 80px;">
+            <button onclick="addScreenTime()">Log</button>
+        </div>
+        <div style="margin-top: 15px;">
+            <small>Total: <span id="st-total">0</span> hrs</small>
+            <div id="st-list" class="list-group"></div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    const DB_KEYS = {
+        HABITS: 'life_habits_v2',
+        RESOLUTIONS: 'life_resolutions_v2',
+        PLANNER: 'life_planner_v2',
+        SCREENTIME: 'life_screentime_v2',
+        BAD_HABITS: 'life_bad_habits_v2'
+    };
+
+    let state = {
+        habits: JSON.parse(localStorage.getItem(DB_KEYS.HABITS)) || [],
+        resolutions: JSON.parse(localStorage.getItem(DB_KEYS.RESOLUTIONS)) || [],
+        planner: JSON.parse(localStorage.getItem(DB_KEYS.PLANNER)) || [],
+        screentime: JSON.parse(localStorage.getItem(DB_KEYS.SCREENTIME)) || [],
+        badHabits: JSON.parse(localStorage.getItem(DB_KEYS.BAD_HABITS)) || []
+    };
+
+    function save(key, data) { localStorage.setItem(key, JSON.stringify(data)); }
+
+    // --- CLOCK ---
+    let is24Hour = false;
+    let selectedZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const zones = ["Local Time", "UTC", "America/New_York", "Europe/London", "Asia/Tokyo"];
+    const tzSelect = document.getElementById('timezone-select');
+    zones.forEach(z => {
+        const opt = document.createElement('option');
+        opt.value = z === "Local Time" ? Intl.DateTimeFormat().resolvedOptions().timeZone : z;
+        opt.text = z;
+        tzSelect.appendChild(opt);
+    });
+
+    function updateClock() {
+        const now = new Date();
+        const opts = { timeZone: selectedZone, hour12: !is24Hour, hour:'2-digit', minute:'2-digit', second:'2-digit' };
+        document.getElementById('clock-time').textContent = new Intl.DateTimeFormat('en-US', opts).format(now);
+        document.getElementById('clock-date').textContent = new Intl.DateTimeFormat('en-US', {timeZone: selectedZone, weekday:'long', month:'long', day:'numeric'}).format(now);
+    }
+    tzSelect.addEventListener('change', (e) => { selectedZone = e.target.value; updateClock(); });
+    document.getElementById('fmt-toggle').addEventListener('click', () => { is24Hour = !is24Hour; updateClock(); });
+    setInterval(updateClock, 1000);
+
+    // --- BAD HABITS (STREAKS) ---
+    function addBadHabit() {
+        const input = document.getElementById('bad-habit-input');
+        if(!input.value) return;
+        state.badHabits.push({ id: Date.now(), name: input.value, startDate: Date.now() });
+        save(DB_KEYS.BAD_HABITS, state.badHabits);
+        input.value = '';
+        renderBadHabits();
+    }
+
+    function renderBadHabits() {
+        const list = document.getElementById('bad-habit-list');
+        list.innerHTML = '';
+        state.badHabits.forEach(bh => {
+            const diff = Date.now() - bh.startDate;
+            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+            const div = document.createElement('div');
+            div.className = 'list-row';
+            div.innerHTML = `
+                <div>
+                    <strong>${bh.name}</strong><br>
+                    <span class="streak-count">${days} Days Clean</span>
+                </div>
+                <div>
+                    <button class="icon-btn" onclick="resetStreak(${bh.id})" title="Relapse/Reset"><i class="ph ph-arrow-counter-clockwise"></i></button>
+                    <button class="icon-btn" onclick="deleteBadHabit(${bh.id})"><i class="ph ph-trash"></i></button>
+                </div>
+            `;
+            list.appendChild(div);
+        });
+    }
+
+    window.resetStreak = (id) => {
+        const bh = state.badHabits.find(h => h.id === id);
+        bh.startDate = Date.now();
+        save(DB_KEYS.BAD_HABITS, state.badHabits);
+        renderBadHabits();
+    };
+
+    window.deleteBadHabit = (id) => {
+        state.badHabits = state.badHabits.filter(h => h.id !== id);
+        save(DB_KEYS.BAD_HABITS, state.badHabits);
+        renderBadHabits();
+    };
+
+    // --- POSITIVE HABITS ---
+    let selectedDays = [];
+    document.querySelectorAll('.day-check').forEach(el => {
+        el.addEventListener('click', () => {
+            el.classList.toggle('selected');
+            const day = el.dataset.day;
+            if(selectedDays.includes(day)) selectedDays = selectedDays.filter(d => d !== day);
+            else selectedDays.push(day);
+        });
+    });
+
+    function addHabit() {
+        const name = document.getElementById('habit-name').value;
+        if(!name) return;
+        state.habits.push({ id: Date.now(), name, days: [...selectedDays] });
+        save(DB_KEYS.HABITS, state.habits);
+        renderHabits();
+        document.getElementById('habit-name').value = '';
+        document.querySelectorAll('.day-check').forEach(d => d.classList.remove('selected'));
+        selectedDays = [];
+    }
+
+    function renderHabits() {
+        const list = document.getElementById('habit-list');
+        list.innerHTML = '';
+        state.habits.forEach(h => {
+            const li = document.createElement('li');
+            li.className = 'habit-item';
+            li.innerHTML = `<div class="habit-header"><span>${h.name}</span><button class="icon-btn" onclick="deleteHabit(${h.id})"><i class="ph ph-trash"></i></button></div><div class="habit-details">${h.days.join(', ')}</div>`;
+            list.appendChild(li);
+        });
+    }
+    window.deleteHabit = (id) => { state.habits = state.habits.filter(h => h.id !== id); save(DB_KEYS.HABITS, state.habits); renderHabits(); };
+
+    // --- RESOLUTIONS ---
+    function addResolution() {
+        const input = document.getElementById('res-input');
+        if(!input.value) return;
+        state.resolutions.push({ id: Date.now(), text: input.value });
+        save(DB_KEYS.RESOLUTIONS, state.resolutions);
+        input.value = '';
+        renderResolutions();
+    }
+    function renderResolutions() {
+        const container = document.getElementById('resolutions-container');
+        container.innerHTML = '';
+        state.resolutions.forEach(r => {
+            const div = document.createElement('div');
+            div.className = 'res-card';
+            div.innerHTML = `<div>${r.text}</div><button class="icon-btn" onclick="deleteRes(${r.id})"><i class="ph ph-trash"></i></button>`;
+            container.appendChild(div);
+        });
+    }
+    window.deleteRes = (id) => { state.resolutions = state.resolutions.filter(r => r.id !== id); save(DB_KEYS.RESOLUTIONS, state.resolutions); renderResolutions(); };
+
+    // --- PLANNER ---
+    function addPlan() {
+        const day = document.getElementById('planner-day').value;
+        const time = document.getElementById('planner-time').value;
+        const task = document.getElementById('planner-task').value;
+        if(!task) return;
+        state.planner.push({ id: Date.now(), day, time, task });
+        save(DB_KEYS.PLANNER, state.planner);
+        renderPlanner();
+    }
+    function renderPlanner() {
+        const list = document.getElementById('planner-list');
+        list.innerHTML = '';
+        state.planner.forEach(p => {
+            const div = document.createElement('div');
+            div.className = 'list-row';
+            div.innerHTML = `<div><strong>${p.day}</strong> <span class="time-badge">${p.time}</span> ${p.task}</div><button class="icon-btn" onclick="deletePlan(${p.id})"><i class="ph ph-trash"></i></button>`;
+            list.appendChild(div);
+        });
+    }
+    window.deletePlan = (id) => { state.planner = state.planner.filter(p => p.id !== id); save(DB_KEYS.PLANNER, state.planner); renderPlanner(); };
+
+    // --- SCREEN TIME ---
+    function addScreenTime() {
+        const app = document.getElementById('st-app').value;
+        const hours = parseFloat(document.getElementById('st-hours').value) || 0;
+        if(!app) return;
+        state.screentime.push({ id: Date.now(), app, hours });
+        save(DB_KEYS.SCREENTIME, state.screentime);
+        renderScreenTime();
+    }
+    function renderScreenTime() {
+        const list = document.getElementById('st-list');
+        list.innerHTML = '';
+        let total = 0;
+        state.screentime.forEach(s => {
+            total += s.hours;
+            const div = document.createElement('div');
+            div.className = 'list-row';
+            div.innerHTML = `<span>${s.app}</span><span>${s.hours} hrs <button class="icon-btn" onclick="deleteST(${s.id})"><i class="ph ph-trash"></i></button></span>`;
+            list.appendChild(div);
+        });
+        document.getElementById('st-total').textContent = total;
+    }
+    window.deleteST = (id) => { state.screentime = state.screentime.filter(s => s.id !== id); save(DB_KEYS.SCREENTIME, state.screentime); renderScreenTime(); };
+
+    // --- INIT ---
+    updateClock();
+    renderBadHabits();
+    renderHabits();
+    renderResolutions();
+    renderPlanner();
+    renderScreenTime();
+</script>
+</body>
+</html>
